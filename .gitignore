@@ -11,4 +11,6 @@ wheels/
 
 # large files
 checkpoints/*
+!checkpoints/README.md
+
 results/

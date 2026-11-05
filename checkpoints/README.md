@@ -1,0 +1,1 @@
+The example commands assume you put checkpoints here from https://drive.google.com/drive/folders/1q1aeZAD8EObkU-Xv94Z3PWu0Ct1-8Mno?usp=drive_link
