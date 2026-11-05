@@ -10,5 +10,5 @@ wheels/
 .venv
 
 # large files
-checkpoints/
+checkpoints/*
 results/

@@ -1,6 +1,6 @@
 # Pose Model Inference Example
 
-This repo contains some poorly written helpers to work with YOLO, supervision KeyPoints, and Breadboard-Classifier types. It also contains a demo CLI that takes in paths to images or directories of images and writes debug images annotated with their detections, alongside a minimal vision model json from the Breadboard-Classifier repo.
+This repo contains helpers to work with YOLO, supervision KeyPoints, and Breadboard-Classifier types. It also contains a demo CLI that takes in paths to images or directories of images and writes debug images annotated with their detections, alongside a minimal vision model json from the Breadboard-Classifier repo.
 
 It basically just snaps the detected keypoints to their nearest neighbor pinhole position
 
@@ -15,6 +15,7 @@ uv sync
 ```
 Will install the dependencies. This may take a while if you have slow internet and don't happen to already have the correct torch and cuda versions installed
 
+
 ## Usage
 
 ```
@@ -23,7 +24,7 @@ uv run inference.py examples --model=checkpoints/rf-detr-704-square-norm-synth10
 
 will write annotated images and minimal vision model json files to subdirectories of `./results` by default. The output directory can be changed with `-o path/to/dir`
 
-The json files can be loaded by `Netlist.from_json`
+The json files can be loaded by `breadboard.netlist.Netlist.from_json`
 
 
 ## Options
@@ -38,15 +39,15 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  -o, --output OUTPUT   path to the top level output directory
-  --model MODEL         path to the rf-detr or yolo model checkpoint to use
+  -o, --output OUTPUT   path to the top level output directory (default: results)
+  --model MODEL         path to the rf-detr or yolo model checkpoint to use (default: checkpoints/rf-detr-704-square-norm-synth10kv0-rp170.pth)
   --model-space {canonical,raw}
-                        what space is assumed by the model (rectified or not)
+                        what space is assumed by the model (rectified or not) (default: canonical)
   --input-space {canonical,raw}
-                        what space the input images are in (rectified or not)
+                        what space the input images are in (rectified or not) (default: raw)
   --model-type {yolo,rf-detr}
-                        autodetected from file extension if left empty
-  --conf CONF           uses the default confidence from the checkpoint if left empty
+                        autodetected from file extension if left empty (default: None)
+  --conf CONF           uses the default confidence from the checkpoint if left empty (default: None)
 ```
 
 ## API Example

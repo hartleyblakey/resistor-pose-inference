@@ -1,19 +1,24 @@
-from PIL import ImageOps
-import copy
-from helpers import draw_components
-import json
-from typing import Literal
-from helpers import keypoints_to_components, draw_keypoints
+"""Detect resistors in an image with a YOLO or RF-DETR pose model.
 
-from breadboard.rectify import rectify, load_photo, template_holes
-from breadboard.netlist import Component, Netlist, Pin
+This script processes input images or directories to identify and locate resistors
+using a specified pose estimation model. It supports both YOLO and RF-DETR 
+architectures and handles coordinate transformations between raw and canonical spaces.
+
+Example Usage:
+    uv run inference.py --model path/to/weights.pth --output ./results img1.jpg img2.jpg
+"""
+
+from helpers import keypoints_to_components, draw_keypoints, resize_width, remap_keypoints, draw_components
+
+from breadboard.rectify import rectify, load_photo
+from breadboard.netlist import Netlist
+
+from typing import Literal
 
 from rfdetr import RFDETRKeypointPreview
 from ultralytics import YOLO
 
 from pathlib import Path
-
-import cv2
 
 import numpy as np
 
@@ -76,43 +81,11 @@ def infer_model_type(model_path: Path) -> Literal["rf-detr", "yolo"] | None:
     else:
         return None
 
-def transform_points_3x3(points, mat3):
-    if points.size == 0:
-        return points
-    original_shape = points.shape
-    points_transformed = points.reshape(-1, 1, 2)
-    points_transformed = cv2.perspectiveTransform(points_transformed, mat3)
-    return points_transformed.reshape(original_shape)
-
-def resize_width(image: np.ndarray, target_width: int):
-    h, w = image.shape[:2]
-    factor = float(target_width) / float(w)
-    return cv2.resize(image, (target_width, int(h * factor)), interpolation=cv2.INTER_NEAREST)
-
-def remap_keypoints(keypoints: sv.KeyPoints, mat3: np.ndarray) -> sv.KeyPoints:
-    new_keypoints = copy.deepcopy(keypoints)
-    x1, y1, x2, y2 = new_keypoints.data["xyxy"].T
-    corners = np.stack([
-        np.stack([x1, y1], axis=-1),   # top-left
-        np.stack([x2, y1], axis=-1),   # top-right
-        np.stack([x2, y2], axis=-1),   # bottom-right
-        np.stack([x1, y2], axis=-1),   # bottom-left
-    ], axis=1)                         # (n, 4, 2)
-
-    warped = transform_points_3x3(corners, mat3)
-
-    bmin = np.min(warped, axis=1) # (n, 2)
-    bmax = np.max(warped, axis=1) # (n, 2)
-
-    new_keypoints.data["xyxy"] = np.concatenate([bmin, bmax], axis=1)
-    new_keypoints.data["xyxyxyxy"] = warped
-
-    new_keypoints.xy = transform_points_3x3(new_keypoints.xy, mat3)
-
-    return new_keypoints
-
 def run(model_path: Path, image_paths: list[Path], input_space: Literal["canonical", "raw"], model_space: Literal["canonical", "raw"], model_type: Literal["rf-detr", "yolo"], out_dir: Path = Path("./results"), **kwargs):
     
+    if model_space == "raw" and input_space == "canonical":
+        print(f"Warning: unable to map 'canonical' input images to the requested 'raw' space for inference")
+
     match model_type:
         case "rf-detr":
             model = RFDETRKeypointPreview(pretrain_weights=model_path)
@@ -168,16 +141,20 @@ def run(model_path: Path, image_paths: list[Path], input_space: Literal["canonic
         out_json_file = json_dir / f"{path.stem}.json"
         out_json_file.write_text(vision_json_str)
 
-
         combined = np.vstack([image, annotated, components_img_resized])
 
         Image.fromarray(combined).save(img_dir / f"{path.stem}.png")
 
+        print(f"Found {len(components)} components in {path}:")
+
+        for c in components:
+            print("-", c.type, [p.hole for p in c.pins.values()])
+
 def main():
-    parser = argparse.ArgumentParser(description="Detect resistors in an image using a pose model")
+    parser = argparse.ArgumentParser(description="Detect resistors in an image using a pose model", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("inputs", nargs="+", help="image files or directories")
     parser.add_argument("-o", "--output", type=Path, default=Path("results"), help="path to the top level output directory")
-    parser.add_argument("--model", type=Path, default=Path("rf-detr-704-square-norm-synth10kv0-rp170.pth"), help="path to the rf-detr or yolo model checkpoint to use")
+    parser.add_argument("--model", type=Path, default=Path("checkpoints/rf-detr-704-square-norm-synth10kv0-rp170.pth"), help="path to the rf-detr or yolo model checkpoint to use")
     parser.add_argument("--model-space", choices=["canonical", "raw"], default="canonical", help="what space is assumed by the model (rectified or not)")
     parser.add_argument("--input-space", choices=["canonical", "raw"], default="raw", help="what space the input images are in (rectified or not)")
     parser.add_argument("--model-type", choices=["yolo", "rf-detr"], help="autodetected from file extension if left empty")
@@ -191,6 +168,9 @@ def main():
 
     if model_type is None:
         raise SystemExit("Unable to determine model type from path. Pass yolo or rf-detr explicitly to --model-type")
+
+    if not args.model.exists():
+        raise SystemExit(f"Checkpoint path not found: {args.model}")
 
     extra_args = {}
 
