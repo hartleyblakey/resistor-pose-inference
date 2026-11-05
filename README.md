@@ -91,6 +91,8 @@ This version was rectified to canonical space before training and the keypoints 
 
 Despite the file count there are only 170 breadboards represented. Each is duplicated 5 times, either by changing the lighting for tripod photos or by literally duplicating the same image 5 times to match the training weight of the tripod photos. Images were rectified after duplication, and many failed so were dropped from the dataset. Images were split into train/val sets in groups based on the background, so there shouldn't be any crossover.
 
+The raw dataset can be found at https://drive.google.com/file/d/1xsoI4EqDbpgFsjT0hOp4PMmeqRH36CpI/view?usp=drive_link
+
 `synth10kv0` is the synthetic blender image dataset: https://drive.google.com/file/d/1VhsgYxYJrp4O3tHwkYKaG6awif6WY5qO/view?usp=drive_link
 
 This version was *not* rectified before training. The keypoints of each instance are also ordered by x coordinate
