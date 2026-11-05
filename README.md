@@ -83,6 +83,18 @@ for c in keypoints_to_components(class_names, keypoints):
 
 Basically just rectify the image before running it through the model if that's what it was trained on. `keypoints_to_components` is a simple helper that converts `supervision` `KeyPoints` objects to lists of `Component`s from Breadboard-Classifier. In the process it also snaps the raw predicted keypoint positions to their closest breadboard pinhole, and merges detections that share identical pinholes.
 
+## Datasets
+
+`rp170` is the real image dataset used in these checkpoints: https://drive.google.com/file/d/1KQBOJMpaBLqgEBzrtLQNEKsB7ndpKuRj/view?usp=drive_link
+
+This version was rectified to canonical space before training and the keypoints of each instance are ordered by x coordinate
+
+Despite the file count there are only 170 breadboards represented. Each is duplicated 5 times, either by changing the lighting for tripod photos or by literally duplicating the same image 5 times to match the training weight of the tripod photos. Images were rectified after duplication, and many failed so were dropped from the dataset. Images were split into train/val sets in groups based on the background, so there shouldn't be any crossover.
+
+`synth10kv0` is the synthetic blender image dataset: https://drive.google.com/file/d/1VhsgYxYJrp4O3tHwkYKaG6awif6WY5qO/view?usp=drive_link
+
+This version was *not* rectified before training. The keypoints of each instance are also ordered by x coordinate
+
 ## Checkpoints
 
 | Checkpoint                                   | --model-space | training       | F1*     | res       | notes                                                               |
@@ -90,10 +102,10 @@ Basically just rectify the image before running it through the model if that's w
 | rf-detr-704-square-norm-rp170.pth            | canonical     | real only      | 0.784   | 704x704   |                                                                     |
 | rf-detr-704-square-norm-synth10kv0-rp170.pth | canonical     | synthetic+real | 0.913   | 704x704   |                                                                     |
 | rf-detr-704-square-norm-synth10kv0.pth       | raw           | synthetic only | 0.760** | 704x704   |                                                                     |
-| yolo26s_aug_closs_v1-3_rp170.pt              | canonical     | real only      | 0.665   | 1280x1280 | older checkpoint, not sure exactly how it was configured or trained |
-| yolo26s_aug_photo_flip_synth10kv0-rp170-2.pt | canonical     | synthetic+real | 0.830   | 1280x1280 | retrained for more epochs with a lower learning rate                |
-| yolo26s_aug_photo_flip_synth10kv0-rp170.pt   | canonical     | synthetic+real | 0.843   | 1280x1280 |                                                                     |
-| yolo26s_aug_photo_flip_synth10kv0.pt         | raw           | synthetic only | 0.833** | 1280x1280 |                                                                     |
+| yolo26s_aug_closs_v1-3_rp170.pt              | canonical     | real only      | 0.665   | 1024x1024 | older checkpoint, not sure exactly how it was configured or trained |
+| yolo26s_aug_photo_flip_synth10kv0-rp170-2.pt | canonical     | synthetic+real | 0.830   | 1024x1024 | retrained for more epochs with a lower learning rate                |
+| yolo26s_aug_photo_flip_synth10kv0-rp170.pt   | canonical     | synthetic+real | 0.843   | 1024x1024 |                                                                     |
+| yolo26s_aug_photo_flip_synth10kv0.pt         | raw           | synthetic only | 0.833** | 1024x1024 |                                                                     |
 
 \* Take the F1 scores with a massive grain of salt because of the tiny val set from the same cameras, components, and (mostly) environments as the training data. Detections were deduplicated by identical hole coverage and counted as correct if both holes of the detected resistor matched a label.
 
@@ -103,6 +115,7 @@ Other Notes for all checkpoints:
 - I think the underlying ultralytics/roboflow inference code handles resizing and preprocessing automatically so you shouldn't need to care about the resolution of the images you feed it
 - canonical is the default for --model-space if you don't pass anything
 - "raw" images are more like a close crop since I tried to take well centered easy images where the breadboard was large in the frame
+- synthetic+real checkpoints were trained in 2 stages, first on the pure synthetic dataset then on the pure real dataset
 
 I don't really have much to say about the checkpoint training because it was so poorly planned and documented. Probably just that it's much better to spend time taking more pictures than tweaking augmentation configs aimlessly by hand. They used heavy photometric augmentation and only flip + the default geometric augmentations for YOLO.
 
